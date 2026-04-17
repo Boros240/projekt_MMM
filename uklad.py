@@ -54,6 +54,38 @@ def calka_eulera(t_start,t_stop,dt,amplituda,czestotliwosc,R,L,Ke,Kt,J,k):
         theta[n+1] = theta[n] + dtheta_dt * dt
     return czas,u,i_prad,omega
 
+
+def generuj_pile(t_start, t_stop, dt, amplituda, czestotliwosc, offset=None):
+    """
+    Generuje sygnał piłokształtny z przesunięciem (offsetem).
+    
+    Argumenty:
+    t_start       - czas początkowy
+    t_stop        - czas końcowy
+    dt            - krok czasu
+    amplituda     - "wychylenie" sygnału (wartości bazowe od -A do A)
+    czestotliwosc - ilość pełnych cykli na sekundę (Hz)
+    offset        - domyślnie równy amplitudzie, podnosi sygnał tak, by wartości były >= 0
+    """
+    okres = 1.0 / czestotliwosc
+    liczba_krokow = int(round((t_stop - t_start) / dt)) + 1
+    
+    # Jeśli brak offsetu, ustawiamy na amplitudę (minimum sygnału ląduje na 0)
+    if offset is None:
+        offset = amplituda
+        
+    t_wartosci = [t_start + i * dt for i in range(liczba_krokow)]
+    u_wartosci = []
+    
+    for t in t_wartosci:
+        # Faza sygnału (wartość od 0.0 do blisko 1.0)
+        faza = (t % okres) / okres
+        
+        # Generowanie piły (od -1.0 do 1.0), skalowanie i dodanie offsetu
+        y = ((-1.0 + 2.0 * faza) * amplituda) + offset
+        u_wartosci.append(y)
+        
+    return t_wartosci, u_wartosci
 # ==========================================
 # 7. WIZUALIZACJA WYNIKÓW
 # ==========================================
