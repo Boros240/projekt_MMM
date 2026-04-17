@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy import signal # Dodajemy moduł do generowania piły i prostokąta
 import math
 
-def calka_eulera(t_start,t_stop,dt,amplituda,czestotliwosc,R,L,Ke,Kt,J,k):
+def calka_eulera(t_start,t_stop,dt,amplituda,czestotliwosc,R,L,Ke,Kt,J,k, typ_sygnalu="sinusoidalny", wypelnienie=0.5, phi=0.0):
 
     N = int((t_stop - t_start) / dt)
 
@@ -14,8 +14,16 @@ def calka_eulera(t_start,t_stop,dt,amplituda,czestotliwosc,R,L,Ke,Kt,J,k):
     theta = np.zeros(N)
     u = np.zeros(N)
 
-    u = amplituda * signal.sawtooth(2 * np.pi * czestotliwosc * czas)
-
+    typ = typ_sygnalu.lower().strip()
+    if typ == "sinusoidalny":
+        u = amplituda * np.sin(2 * np.pi * czestotliwosc * czas + phi)
+    elif typ == "piłozębny" or typ == "piłozebny":
+        u = amplituda * signal.sawtooth(2 * np.pi * czestotliwosc * czas + phi)
+    elif typ == "prostokątny" or typ == "prostokatny":
+        duty = max(0.0, min(1.0, wypelnienie))
+        u = amplituda * signal.square(2 * np.pi * czestotliwosc * czas + phi, duty=duty)
+    else:
+        raise ValueError(f"Nieobsługiwany typ sygnału: {typ_sygnalu}")
 
     for n in range(N - 1):
         di_dt = (1/L) * (u[n] - R * i_prad[n] - Ke * omega[n])

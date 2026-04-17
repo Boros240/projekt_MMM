@@ -37,6 +37,8 @@ class SymulacjaApp(ctk.CTk):
             ("dt", "Krok czasu dt [s]", "0.001"),
             ("amplituda", "Amplituda napięcia [V]", "12.0"),
             ("czestotliwosc", "Częstotliwość [Hz]", "1.0"),
+            ("phi", "Przesunięcie fazowe [rad]", "0.0"),
+            ("wypelnienie", "Wypełnienie [0-1]", "0.5"),
             ("R", "Rezystancja R [Ohm]", "2.0"),
             ("L", "Indukcyjność L [H]", "0.5"),
             ("Ke", "Stała nap. Ke", "0.1"),
@@ -58,6 +60,26 @@ class SymulacjaApp(ctk.CTk):
             entry.pack(side="right")
             
             self.pola_tekstowe[klucz] = entry
+            if klucz == "wypelnienie":
+                self.frame_wypelnienie = frame_param
+                self.entry_wypelnienie = entry
+
+        # Typ sygnału wejściowego
+        frame_typ_sygnalu = ctk.CTkFrame(self.panel_ui, fg_color="transparent")
+        frame_typ_sygnalu.pack(fill="x", pady=8, padx=10)
+
+        ctk.CTkLabel(frame_typ_sygnalu, text="Typ sygnału:", width=130, anchor="w").pack(side="left")
+        self.typ_sygnalu_var = ctk.StringVar(value="sinusoidalny")
+        self.option_typ_sygnalu = ctk.CTkOptionMenu(
+            frame_typ_sygnalu,
+            values=["sinusoidalny", "prostokątny", "piłozębny"],
+            variable=self.typ_sygnalu_var,
+            width=120
+        )
+        self.option_typ_sygnalu.pack(side="right")
+
+        # Pole wypełnienia sygnału prostokątnego jest tworzone w pętli parametrów
+        self.typ_sygnalu_var.trace_add("write", self.on_typ_sygnalu_change)
 
         # Przycisk uruchamiający symulację
         self.btn_generuj = ctk.CTkButton(self.panel_ui, text="Generuj Symulację", command=self.uruchom_symulacje)
@@ -73,19 +95,30 @@ class SymulacjaApp(ctk.CTk):
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.panel_wykresu)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
 
+        self.on_typ_sygnalu_change()
+
         # Uruchomienie pierwszej symulacji na starcie
         self.uruchom_symulacje()
+
+    def on_typ_sygnalu_change(self, *args):
+        if self.typ_sygnalu_var.get() == "prostokątny":
+            self.frame_wypelnienie.pack(fill="x", pady=8, padx=10)
+        else:
+            self.frame_wypelnienie.pack_forget()
 
     def uruchom_symulacje(self):
         try:
             # 1. Pobranie i konwersja wartości wpisanych przez użytkownika na liczby zmiennoprzecinkowe (float)
             p = {klucz: float(pole.get()) for klucz, pole in self.pola_tekstowe.items()}
 
+            wypelnienie = float(self.pola_tekstowe["wypelnienie"].get())
+
             # 2. Wywołanie Twojej metody z uklad.py
             czas, u, i_prad, omega = calka_eulera(
                 p["t_start"], p["t_stop"], p["dt"], 
                 p["amplituda"], p["czestotliwosc"], 
-                p["R"], p["L"], p["Ke"], p["Kt"], p["J"], p["k"]
+                p["R"], p["L"], p["Ke"], p["Kt"], p["J"], p["k"],
+                self.typ_sygnalu_var.get(), wypelnienie, p["phi"]
             )
 
             # 3. Aktualizacja górnego wykresu (Napięcie wymuszające i Prąd)
@@ -112,6 +145,8 @@ class SymulacjaApp(ctk.CTk):
         except ValueError:
             # Komunikat błędu, jeśli użytkownik wpisze np. "abc" zamiast liczby
             messagebox.showerror("Błąd danych", "Upewnij się, że wszystkie parametry są poprawnymi liczbami (używaj kropki, nie przecinka).")
+        except Exception as e:
+            messagebox.showerror("Błąd symulacji", f"Wystąpił nieoczekiwany błąd:\n{str(e)}")
         except Exception as e:
             messagebox.showerror("Błąd symulacji", f"Wystąpił nieoczekiwany błąd:\n{str(e)}")
 
