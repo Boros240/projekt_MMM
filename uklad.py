@@ -54,6 +54,44 @@ def calka_eulera(t_start,t_stop,dt,amplituda,czestotliwosc,R,L,Ke,Kt,J,k):
         theta[n+1] = theta[n] + dtheta_dt * dt
     return czas,u,i_prad,omega
 
+def generuj_prostokat(t_start, t_stop, dt, amplituda, czestotliwosc, wypelnienie=0.5, offset=None):
+    """
+    Generuje sygnał prostokątny z zadanym wypełnieniem i przesunięciem (offsetem).
+    
+    Argumenty:
+    t_start       - czas początkowy
+    t_stop        - czas końcowy
+    dt            - krok czasu
+    amplituda     - "wychylenie" sygnału (wartości bazowe od -A do A)
+    czestotliwosc - ilość pełnych cykli na sekundę (Hz)
+    wypelnienie   - ułamek okresu (od 0.0 do 1.0), w którym sygnał jest w stanie wysokim
+    offset        - domyślnie równy amplitudzie, podnosi sygnał tak, by wartości były >= 0
+    """
+    okres = 1.0 / czestotliwosc
+    liczba_krokow = int(round((t_stop - t_start) / dt)) + 1
+    
+    # Jeśli brak offsetu, ustawiamy na amplitudę (minimum sygnału ląduje na 0)
+    if offset is None:
+        offset = amplituda
+        
+    t_wartosci = [t_start + i * dt for i in range(liczba_krokow)]
+    u_wartosci = []
+    
+    for t in t_wartosci:
+        # Faza sygnału (wartość od 0.0 do blisko 1.0)
+        faza = (t % okres) / okres
+        
+        # Logika dla sygnału prostokątnego
+        if faza < wypelnienie:
+            y_norm = 1.0   # Stan wysoki
+        else:
+            y_norm = -1.0  # Stan niski
+            
+        # Skalowanie do amplitudy i dodanie offsetu
+        y = (y_norm * amplituda) + offset
+        u_wartosci.append(y)
+        
+    return t_wartosci, u_wartosci
 # ==========================================
 # 7. WIZUALIZACJA WYNIKÓW
 # ==========================================
