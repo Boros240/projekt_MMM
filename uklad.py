@@ -1,137 +1,49 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal # Dodajemy moduł do generowania piły i prostokąta
 import math
 
-def calka_eulera(t_start,t_stop,dt,amplituda,czestotliwosc,R,L,Ke,Kt,J,k, typ_sygnalu="sinusoidalny", wypelnienie=0.5, phi=0.0):
+def calka_eulera(t_start, t_stop, dt, amplituda, czestotliwosc, R, L, Ke, Kt, J, k, typ_sygnalu="sinusoidalny", wypelnienie=0.5, phi=0.0):
 
     N = int((t_stop - t_start) / dt)
+    
+    # Zastępujemy np.linspace listą składaną (list comprehension)
+    czas = [t_start + i * dt for i in range(N)]
 
-    czas = np.linspace(t_start, t_stop, N)
-
-    i_prad = np.zeros(N)
-    omega = np.zeros(N)
-    theta = np.zeros(N)
-    u = np.zeros(N)
+    # Zastępujemy np.zeros prealokowanymi listami wypełnionymi zerami
+    i_prad = [0.0] * N
+    omega = [0.0] * N
+    theta = [0.0] * N
+    u = [0.0] * N
 
     typ = typ_sygnalu.lower().strip()
-    if typ == "sinusoidalny":
-        u = amplituda * np.sin(2 * np.pi * czestotliwosc * czas + phi)
-    elif typ == "piłozębny" or typ == "piłozebny":
-        u = amplituda * signal.sawtooth(2 * np.pi * czestotliwosc * czas + phi)
-    elif typ == "prostokątny" or typ == "prostokatny":
-        duty = max(0.0, min(1.0, wypelnienie))
-        u = amplituda * signal.square(2 * np.pi * czestotliwosc * czas + phi, duty=duty)
-    else:
-        raise ValueError(f"Nieobsługiwany typ sygnału: {typ_sygnalu}")
 
+    # Ponieważ nie mamy numpy, generujemy sygnał element po elemencie w pętli
+    for i in range(N):
+        t = czas[i]
+        
+        if typ == "sinusoidalny":
+            u[i] = amplituda * math.sin(2 * math.pi * czestotliwosc * t + phi)
+            
+        elif typ in ["piłozębny", "piłozebny"]:
+            faza = (czestotliwosc * t + phi / (2 * math.pi)) % 1.0
+            u[i] = amplituda * (2.0 * faza - 1.0)
+            
+        elif typ in ["prostokątny", "prostokatny"]:
+            duty = max(0.0, min(1.0, wypelnienie))
+            faza = (czestotliwosc * t + phi / (2 * math.pi)) % 1.0
+            # Zamiast np.where używamy standardowego warunku if/else
+            u[i] = amplituda * (1.0 if faza < duty else -1.0)
+            
+        else:
+            raise ValueError(f"Nieobsługiwany typ sygnału: {typ_sygnalu}")
+
+    # Główna pętla całkująca pozostaje bez zmian, działa na zwykłych listach
     for n in range(N - 1):
         di_dt = (1/L) * (u[n] - R * i_prad[n] - Ke * omega[n])
         domega_dt = (1/J) * (Kt * i_prad[n] - k * theta[n])
         dtheta_dt = omega[n]
-    
+ 
         i_prad[n+1] = i_prad[n] + di_dt * dt
         omega[n+1] = omega[n] + domega_dt * dt
         theta[n+1] = theta[n] + dtheta_dt * dt
-    return czas,u,i_prad,omega
-
-
-
-def generuj_sinus(t_start, t_stop, dt, amplituda, czestotliwosc, offset=None):
-    """
-    Generuje sygnał sinusoidalny z przesunięciem (offsetem).
-    
-    Argumenty:
-    t_start       - czas początkowy
-    t_stop        - czas końcowy
-    dt            - krok czasu
-    amplituda     - "wychylenie" sygnału (wartości bazowe od -A do A)
-    czestotliwosc - ilość pełnych cykli na sekundę (Hz)
-    offset        - domyślnie równy amplitudzie, podnosi sygnał tak, by wartości były >= 0
-    """
-    liczba_krokow = int(round((t_stop - t_start) / dt)) + 1
-
-    # Jeśli brak offsetu, ustawiamy na amplitudę (minimum sygnału ląduje na 0)
-    if offset is None:
-        offset = amplituda
-
-    t_wartosci = [t_start + i * dt for i in range(liczba_krokow)]
-    u_wartosci = []
-
-    for t in t_wartosci:
-        # Obliczenie wartości sinusa dla danego czasu, skalowanie i dodanie offsetu
-        y = (amplituda * math.sin(2.0 * math.pi * czestotliwosc * t)) + offset
-        u_wartosci.append(y)
-
-    return t_wartosci, u_wartosci
-
-def generuj_pile(t_start, t_stop, dt, amplituda, czestotliwosc, offset=None):
-    """
-    Generuje sygnał piłokształtny z przesunięciem (offsetem).
-    
-    Argumenty:
-    t_start       - czas początkowy
-    t_stop        - czas końcowy
-    dt            - krok czasu
-    amplituda     - "wychylenie" sygnału (wartości bazowe od -A do A)
-    czestotliwosc - ilość pełnych cykli na sekundę (Hz)
-    offset        - domyślnie równy amplitudzie, podnosi sygnał tak, by wartości były >= 0
-    """
-    okres = 1.0 / czestotliwosc
-    liczba_krokow = int(round((t_stop - t_start) / dt)) + 1
-
-    # Jeśli brak offsetu, ustawiamy na amplitudę (minimum sygnału ląduje na 0)
-    if offset is None:
-        offset = amplituda
-
-    t_wartosci = [t_start + i * dt for i in range(liczba_krokow)]
-    u_wartosci = []
-
-    for t in t_wartosci:
-        # Faza sygnału (wartość od 0.0 do blisko 1.0)
-        faza = (t % okres) / okres
-
-        # Generowanie piły (od -1.0 do 1.0), skalowanie i dodanie offsetu
-        y = ((-1.0 + 2.0 * faza) * amplituda) + offset
-        u_wartosci.append(y)
-
-    return t_wartosci, u_wartosci
-    
-def generuj_prostokat(t_start, t_stop, dt, amplituda, czestotliwosc, wypelnienie=0.5, offset=None):
-    """
-    Generuje sygnał prostokątny z zadanym wypełnieniem i przesunięciem (offsetem).
-    
-    Argumenty:
-    t_start       - czas początkowy
-    t_stop        - czas końcowy
-    dt            - krok czasu
-    amplituda     - "wychylenie" sygnału (wartości bazowe od -A do A)
-    czestotliwosc - ilość pełnych cykli na sekundę (Hz)
-    wypelnienie   - ułamek okresu (od 0.0 do 1.0), w którym sygnał jest w stanie wysokim
-    offset        - domyślnie równy amplitudzie, podnosi sygnał tak, by wartości były >= 0
-    """
-    okres = 1.0 / czestotliwosc
-    liczba_krokow = int(round((t_stop - t_start) / dt)) + 1
-    
-    # Jeśli brak offsetu, ustawiamy na amplitudę (minimum sygnału ląduje na 0)
-    if offset is None:
-        offset = amplituda
         
-    t_wartosci = [t_start + i * dt for i in range(liczba_krokow)]
-    u_wartosci = []
-    
-    for t in t_wartosci:
-        # Faza sygnału (wartość od 0.0 do blisko 1.0)
-        faza = (t % okres) / okres
-        
-        # Logika dla sygnału prostokątnego
-        if faza < wypelnienie:
-            y_norm = 1.0   # Stan wysoki
-        else:
-            y_norm = -1.0  # Stan niski
-            
-        # Skalowanie do amplitudy i dodanie offsetu
-        y = (y_norm * amplituda) + offset
-        u_wartosci.append(y)
-        
-    return t_wartosci, u_wartosci
+    return czas, u, i_prad, omega
