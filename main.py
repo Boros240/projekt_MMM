@@ -3,11 +3,10 @@ import tkinter.messagebox as messagebox
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-# Importujemy Twoją funkcję z pliku uklad.py
 from uklad import calka_eulera
 
 # Konfiguracja wyglądu CustomTkinter
-ctk.set_appearance_mode("System")  # Tryb jasny/ciemny zależnie od systemu
+ctk.set_appearance_mode("System") 
 ctk.set_default_color_theme("blue")
 
 class SymulacjaApp(ctk.CTk):
@@ -145,8 +144,6 @@ class SymulacjaApp(ctk.CTk):
         except ValueError:
             # Komunikat błędu, jeśli użytkownik wpisze np. "abc" zamiast liczby
             messagebox.showerror("Błąd danych", "Upewnij się, że wszystkie parametry są poprawnymi liczbami (używaj kropki, nie przecinka).")
-        except Exception as e:
-            messagebox.showerror("Błąd symulacji", f"Wystąpił nieoczekiwany błąd:\n{str(e)}")
         except Exception as e:
             messagebox.showerror("Błąd symulacji", f"Wystąpił nieoczekiwany błąd:\n{str(e)}")
 
